@@ -210,11 +210,11 @@ ntamari_neu g (B u1 u2) =
 -- question: what is the probability that a random pair of trees (t1,t2) with n nodes are related by the Tamari order t1 <= t2?
 -- answer: # intervals in Yn / (Cn * Cn) = 2 * (4*n+1)! * n!^2 * (n+1)! / ((3*n+2)!*(2*n)!^2)
 -- here we test this formula experimentally
-tamintprob :: Int -> Int -> IO Rational
+tamintprob :: Int -> Int -> IO Int
 tamintprob n samples = do
   tests <- replicateM samples experiment
-  let total = length (filter id tests)
-  return $ (toRational total) / (toRational samples)
+  let total = foldr (\b total -> if b then 1+total else total) 0 tests
+  return total 
   where
     experiment :: IO Bool
     experiment = do
@@ -222,11 +222,10 @@ tamintprob n samples = do
       t2 <- remy_tree' n
       return $ tamari_linv t1 [] t2
 {-
-> tamintprob 5 50000 >>= (return . fromRational)
-0.22644
-> tamintprob 5 50000 >>= (return . fromRational)
-0.22666
-> tamintprob 5 50000 >>= (return . fromRational)
-0.22456
+> tamintprob 5 1000000
+226166
 -- compare to expected probability = 19/84 = 0.226190...
+> tamintprob 12 1000000
+8515
+-- compare to expected probability = 82861/9598268 = 0.00863291...
 -}
