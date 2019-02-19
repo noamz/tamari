@@ -64,13 +64,16 @@ sprout t dir n = sprout_cps t dir n id (error "sprout: index out of bounds")
     sprout_cps L dir n ks kf = kf (n-1)
 
 -- generate a uniformly random binary tree with n nodes via Rémy's algorithm
-remy_tree :: RandomGen g => Int -> g -> IO (Tree,g)
-remy_tree 0 g = return (L, g)
-remy_tree n g = do
-  let (i,g') = randomR (0,2*n-2) g
-  let (lr,g'') = randomR (False,True) g'
-  (t,g''') <- remy_tree (n-1) g''
-  return (sprout t lr i, g''')
+remy_tree :: RandomGen g => Int -> g -> (Tree,g)
+remy_tree 0 g = (L, g)
+remy_tree n g =
+  let (i,g') = randomR (0,2*n-2) g in
+  let (lr,g'') = randomR (False,True) g' in
+  let (t,g''') = remy_tree (n-1) g'' in
+  (sprout t lr i, g''')
+
+remy_tree' :: Int -> IO Tree
+remy_tree' n = getStdRandom (remy_tree n)
 
 -- three different ways of converting binary trees to matching parentheses
 showTreeL :: Tree -> String
