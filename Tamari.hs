@@ -6,6 +6,7 @@ module Tamari where
 import Data.List
 import Data.Maybe
 import Catalan
+import Control.Monad
 
 rotR1 :: Tree -> [Tree]
 rotR1 (B (t1 @ (B t11 t12)) t2) =
@@ -205,3 +206,27 @@ ntamari_neu g (B u1 u2) =
 -- > [length [(t1,t2) | t1 <- binary_trees n, t2 <- binary_trees n, ntamari_linv t1 [] t2] | n <- [1..]]
 -- [1,2,6,22,91,408,1938,  C-c C-cInterrupted.
 -- https://oeis.org/A000139 == rooted non-separable planar maps with n edges == canopy intervals in the Tamari lattices
+
+-- question: what is the probability that a random pair of trees (t1,t2) with n nodes are related by the Tamari order t1 <= t2?
+-- answer: # intervals in Yn / (Cn * Cn) = 2 * (4*n+1)! * n!^2 * (n+1)! / ((3*n+2)!*(2*n)!^2)
+-- here we test this formula experimentally
+tamintprob :: Int -> Int -> IO Rational
+tamintprob n samples = do
+  tests <- replicateM samples experiment
+  let total = length (filter id tests)
+  return $ (toRational total) / (toRational samples)
+  where
+    experiment :: IO Bool
+    experiment = do
+      t1 <- remy_tree' n
+      t2 <- remy_tree' n
+      return $ tamari_linv t1 [] t2
+{-
+> tamintprob 5 50000 >>= (return . fromRational)
+0.22644
+> tamintprob 5 50000 >>= (return . fromRational)
+0.22666
+> tamintprob 5 50000 >>= (return . fromRational)
+0.22456
+-- compare to expected probability = 19/84 = 0.226190...
+-}
