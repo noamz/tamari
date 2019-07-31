@@ -181,6 +181,27 @@ bin_type t = pol False t
     pol b L = [b]
     pol b (B t1 t2) = pol False t1 ++ pol True t2
 
+tamari_meetIrr :: Bin -> Bool
+tamari_meetIrr t =
+  let n = nodes t in
+  let ts = binary_trees n \\ [tamari_top n,t] in
+  t /= tamari_top n && all id [tamari_meet' t1 t2 /= t | t1 <- ts, t2 <- ts]
+
+tamari_joinIrr :: Bin -> Bool
+tamari_joinIrr t =
+  let n = nodes t in
+  let ts = binary_trees n \\ [tamari_bot n,t] in
+  t /= tamari_bot n && all id [tamari_join t1 t2 /= t | t1 <- ts, t2 <- ts]
+
+{-
+> [length [(t1,t2) | let ts = filter tamari_joinIrr (binary_trees n), t1 <- ts, t2 <- ts, tamari_linv t1 [] t2] | n <- [1..]]
+[0,1,4,10,20,35,  C-c C-cInterrupted.
+-- A000292?
+> [length [(t1,t2) | t1 <- filter tamari_joinIrr (binary_trees n), t2 <- filter tamari_meetIrr (binary_trees n), tamari_linv t1 [] t2] | n <- [1..]]
+[0,0,4,21,65,155,  C-c C-cInterrupted.
+-- A212246?
+-}
+
 -- canopy intervals
 ntamari_linv :: Bin -> [Bin] -> Bin -> Bool
 ntamari_neu :: [Bin] -> Bin -> Bool
