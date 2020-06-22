@@ -290,6 +290,18 @@ rewrite (RWL p) (B t1 t2)        = B (rewrite p t1) t2
 rewrite (RWR p) (B t1 t2)        = B t1 (rewrite p t2)
 rewrite p       t                = error ("cannot rewrite " ++ showBinU t ++ " by " ++ show p)
 
+outstep :: Bin -> [Rewrite]
+outstep (B (t1 @ (B t11 t12)) t2) =
+  RotR : (RWL <$> outstep t1) ++ (RWR <$> outstep t2)
+outstep (B L t2) = RWR <$> outstep t2
+outstep L = []
+
+outpaths :: Bin -> [[Bin]]
+outpaths t = [t] : [t:ts | p <- outstep t, ts <- outpaths (rewrite p t)]
+
+showpath :: [Bin] -> String
+showpath ts = intercalate " -> " (map showBinU ts)
+
 oplax :: Int -> [Rewrite]
 oplax 1 = []
 oplax n = [RWL p | p <- oplax (n-1)] ++ [RotR]
@@ -308,9 +320,16 @@ canonpath t u = do
   return (reverse $ foldl (\(t:ts) p -> rewrite p t:t:ts) [t] ps)
   
 showcanonpath :: Bin -> Bin -> String
-showcanonpath t u = case canonpath t u of
-  Just ps -> intercalate " -> " (map showBinU ps)
-  Nothing -> "no path"
+showcanonpath t u = maybe "no path" showpath (canonpath t u)
 
 printAllcanonpaths :: Int -> Int -> IO ()
-printAllcanonpaths n k = mapM_ (putStrLn . intercalate " -> " . (map showBinU)) [ps | (t,u) <- tamari' n, let Just ps = canonpath t u, length ps - 1 >= k]
+printAllcanonpaths n k = mapM_ (putStrLn . showpath) [ts | (t,u) <- tamari' n, let Just ts = canonpath t u, length ts - 1 >= k]
+
+all2cells :: Int -> [([Bin],[Bin])]
+all2cells n = [(p,q) | src <- binary_trees n,
+               p <- outpaths src, q <- outpaths src, p /= q,
+               let dst = last p, last q == dst, canonpath src dst == Just q]
+              
+printAll2cells :: Int -> IO ()
+printAll2cells n = mapM_ (\(p,q) -> putStrLn ("[" ++ showpath p ++ "] ==> [" ++ showpath q ++ "]")) (all2cells n)
+  
