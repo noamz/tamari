@@ -328,7 +328,11 @@ printAllcanonpaths n k = mapM_ (putStrLn . showpath) [ts | (t,u) <- tamari' n, l
 all2cells :: Int -> [([Bin],[Bin])]
 all2cells n = [(p,q) | src <- binary_trees n,
                p <- outpaths src, q <- outpaths src, p /= q,
-               let dst = last p, last q == dst, canonpath src dst == Just q]
+               let dst = last p, last q == dst,
+               length p > 1, length q > 1,
+               let (p',q') = (init (tail p), init (tail q)),
+               null (intersect p' q'),
+               canonpath src dst == Just q]
               
 printAll2cells :: Int -> IO ()
 printAll2cells n = mapM_ (\(p,q) -> putStrLn ("[" ++ showpath p ++ "] ==> [" ++ showpath q ++ "]")) (all2cells n)
