@@ -311,3 +311,6 @@ showcanonpath :: Bin -> Bin -> String
 showcanonpath t u = case canonpath t u of
   Just ps -> intercalate " -> " (map showBinU ps)
   Nothing -> "no path"
+
+printAllcanonpaths :: Int -> Int -> IO ()
+printAllcanonpaths n k = mapM_ (putStrLn . intercalate " -> " . (map showBinU)) [ps | (t,u) <- tamari' n, let Just ps = canonpath t u, length ps - 1 >= k]
