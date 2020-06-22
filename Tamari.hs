@@ -253,3 +253,61 @@ tamintprob n samples = do
 19
 -- compare to expected probability = 82300857/491762021465 = 0.000167359...
 -}
+
+-- certifying prover
+
+data ProofR = Ax | TenR Int ProofR ProofL
+  deriving (Show,Eq)
+data ProofL = Sw ProofR | TenL ProofL
+  deriving (Show,Eq)
+
+certL :: Bin -> [Bin] -> Bin -> Maybe ProofL
+certR :: [Bin] -> Bin -> Maybe ProofR
+certL (B t1 t2) g u = TenL <$> certL t1 (t2:g) u
+certL L g u = Sw <$> certR (L:g) u
+certR g L = if g == [L] then Just Ax else Nothing
+certR g (B u1 u2) =
+  let k = leaves u1 in
+  let grab k g acc =
+        if k == 0 then Just (acc,g)
+        else if g == [] then Nothing
+        else
+          let (t:g') = g in
+          let i = leaves t in
+          if i > k then Nothing
+          else grab (k - i) g' (t:acc) in
+  case grab k g [] of
+    Nothing -> Nothing
+    Just (g1,t2:g2) -> TenR (1 + length g2) <$> certR (reverse g1) u1 <*> certL t2 g2 u2
+    Just (g1,[]) -> Nothing
+
+data Rewrite = RotR | RWL Rewrite | RWR Rewrite
+  deriving (Show,Eq)
+
+rewrite :: Rewrite -> Bin -> Bin
+rewrite RotR    (B (B t1 t2) t3) = B t1 (B t2 t3)
+rewrite (RWL p) (B t1 t2)        = B (rewrite p t1) t2
+rewrite (RWR p) (B t1 t2)        = B t1 (rewrite p t2)
+rewrite p       t                = error ("cannot rewrite " ++ showBinU t ++ " by " ++ show p)
+
+oplax :: Int -> [Rewrite]
+oplax 1 = []
+oplax n = [RWL p | p <- oplax (n-1)] ++ [RotR]
+
+fromProofR :: ProofR -> [Rewrite]
+fromProofR Ax             = []
+fromProofR (TenR i p1 p2) = oplax i ++ (RWL <$> fromProofR p1) ++ (RWR <$> fromProofL p2)
+fromProofL :: ProofL -> [Rewrite]
+fromProofL (Sw p)   = fromProofR p
+fromProofL (TenL p) = fromProofL p
+
+canonpath :: Bin -> Bin -> Maybe [Bin]
+canonpath t u = do
+  d <- certL t [] u
+  let ps = fromProofL d
+  return (reverse $ foldl (\(t:ts) p -> rewrite p t:t:ts) [t] ps)
+  
+showcanonpath :: Bin -> Bin -> String
+showcanonpath t u = case canonpath t u of
+  Just ps -> intercalate " -> " (map showBinU ps)
+  Nothing -> "no path"
